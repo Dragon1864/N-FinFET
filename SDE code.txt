@@ -1,0 +1,106 @@
+(define Fw 0.005)
+(define Fh 0.022)
+(define Lg 0.015)
+(define LSDC 0.015)
+(define LSD 0.015)
+(define Tox 0.002)
+
+(define x0 0)
+(define x1 (+ x0 LSDC))
+(define x2 (+ x1 LSD))
+(define x3 (+ x2 Lg))
+(define x4 (+ x3 LSD))
+(define x5 (+ x4 LSDC))
+
+
+(define y0 0)
+(define y1 (+ y0 Fw)    )
+(define y2 (+ y1 Tox)   )
+(define y3 (+ y2 0.010) )
+
+(define z0 0)
+(define z1 (+ z0 Fh)  )
+(define z2 (+ z1 Tox) )
+
+
+(define C_Doping @C_Doping@)
+
+(define SD_Doping @SD_Doping@)
+
+(define B_Doping @B_Doping@)
+
+
+"ABA"
+;--- Source contact and Source ---;
+(sdegeo:create-cuboid (position x0 y0 z0 ) (position x1 y1 z1 ) "Silicon" "SourceC")
+(sdegeo:create-cuboid (position x1 y0 z0 ) (position x2 y1 z1) "Silicon" "Source")
+;--- Gate oxide ---;
+(sdegeo:create-cuboid (position x2 (- y0 Tox) z0 ) (position x3 y2 z2 ) "SiO2" "Gateoxide")
+;--- Channel ---;
+(sdegeo:create-cuboid (position x2 y0 z0 ) (position x3 y1 z1 ) "Silicon" "Channel")
+;--- Drain contact and Drain---;
+(sdegeo:create-cuboid (position x3 y0 z0 ) (position x4 y1 z1 ) "Silicon" "Drain")
+(sdegeo:create-cuboid (position x4 y0 z0 ) (position x5 y1 z1 ) "Silicon" "DrainC")
+;--- Buried oxide ---;
+(sdegeo:create-cuboid (position x0 (- y0 0.010) (- z0 0.020) ) (position x5 y3 z0 ) "SiO2" "Box")
+"ABA"
+;--- Si Body ---;
+(sdegeo:create-cuboid (position x0 y0 (- z0 0.020) ) (position x5 y1 z0 ) "Silicon" "Body")
+
+
+
+;----- Channel -----;
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" C_Doping )
+(sdedr:define-constant-profile-region "RegionC" "dopedC" "Channel" )
+;----- Source -----;
+(sdedr:define-constant-profile "dopedS" "ArsenicActiveConcentration" SD_Doping )
+(sdedr:define-constant-profile-region "RegionS" "dopedS" "Source" )
+(sdedr:define-constant-profile "dopedSC" "ArsenicActiveConcentration" SD_Doping )
+(sdedr:define-constant-profile-region "RegionSC" "dopedSC" "SourceC" )
+;----- Drain ------;
+(sdedr:define-constant-profile "dopedD" "ArsenicActiveConcentration" SD_Doping )
+(sdedr:define-constant-profile-region "RegionD" "dopedD" "Drain" )
+(sdedr:define-constant-profile "dopedDC" "ArsenicActiveConcentration" SD_Doping )
+(sdedr:define-constant-profile-region "RegionDC" "dopedDC" "DrainC" )
+;----- Si Body -----;
+(sdedr:define-constant-profile "dopedB" "BoronActiveConcentration" B_Doping )
+(sdedr:define-constant-profile-region "RegionB" "dopedB" "Body" )
+
+;--- AllMesh ---;
+(sdedr:define-refinement-size "Cha_Mesh" 0.005 0.005 0.005 0.003 0.003 0.003)
+(sdedr:define-refinement-material "channel_RF" "Cha_Mesh" "Silicon" )
+;--- ChannelMesh ---;
+(sdedr:define-refinement-window "multiboxChannel" "Cuboid"  (position x1 y0 z0) (position x4 y1 z1))
+(sdedr:define-multibox-size "multiboxSizeChannel" 0.002 0.002 0.002 0.002 0.002 0.002)
+(sdedr:define-multibox-placement "multiboxPlacementChannel" "multiboxSizeChannel" "multiboxChannel")
+(sdedr:define-refinement-function "multiboxPlacementChannel" "DopingConcentration" "MaxTransDiff" 1)
+
+; --------------------- (3) Contact ------------------;
+;----- Source -----;
+(sdegeo:define-contact-set "S" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
+(sdegeo:set-current-contact-set "S")
+(sdegeo:set-contact-faces (find-face-id (position (+ x0 0.001) (+ y0 0.001) z1)))
+;----- Drain -----;
+(sdegeo:define-contact-set "D" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
+(sdegeo:set-current-contact-set "D")
+
+(sdegeo:set-contact-faces (find-face-id (position (+ x4 0.001) (+ y0 0.001) z1 )))
+;----- Front Gate -----;
+(sdegeo:define-contact-set "G" 4.0 (color:rgb 1.0 0.0 0.0 ) "||" )
+(sdegeo:set-current-contact-set "G")
+(sdegeo:set-contact-faces (find-face-id (position (+ x2 0.001) (- y0 Tox) (+ z0 0.001) )))
+;----- Top Gate -----;
+(sdegeo:define-contact-set "G" 4.0 (color:rgb 1.0 0.0 0.0 ) "||" )
+(sdegeo:set-current-contact-set "G")
+(sdegeo:set-contact-faces (find-face-id (position (+ x2 0.001) (+ y0 0.001) z2 )))
+;----- Back Gate -----;
+(sdegeo:define-contact-set "G" 4.0 (color:rgb 1.0 0.0 0.0 ) "||" )
+(sdegeo:set-current-contact-set "G")
+(sdegeo:set-contact-faces (find-face-id (position (+ x2 0.001) y2 (+ z0 0.001 ) )))
+;----- Body -----;
+(sdegeo:define-contact-set "B" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
+(sdegeo:set-current-contact-set "B")
+(sdegeo:set-contact-faces (find-face-id (position (+ x2 0.001) (+ y0 0.001) (- z0 0.020) )))
+
+
+(sde:build-mesh "" "n@node@_msh")
